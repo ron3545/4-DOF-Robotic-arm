@@ -97,3 +97,70 @@ private:
 };
 
 
+class AS5600
+{
+private:
+  int magnetStatus = 0; //value of the status register (MD, ML, MH)
+
+  int lowbyte; //raw angle 7:0
+  unsigned int highbyte; //raw angle 7:0 and 11:8
+  int rawAngle; //final raw angle 
+  float degAngle; //raw angle in degrees (360/4096 * [value between 0-4095])
+
+  int quadrantNumber, previousquadrantNumber; //quadrant IDs
+  float numberofTurns = 0; //number of turns
+  float correctedAngle = 0; //tared angle - based on the startup value
+  float startAngle = 0; //starting angle
+  float totalAngle = 0; //total absolute angular displacement
+  float previoustotalAngle = 0; //for the display printing
+
+  void checkMagnetPresence(); 
+  void ReadRawAngle();
+  void checkQuadrant();
+  void correctAngle();
+
+public: 
+  AS5600() {}
+  float GetAngle();
+  void Initialize_Sensor();
+};
+
+
+class MotorEncoder {
+  private:
+    const int encoderPinA;
+    const int encoderPinB;
+    volatile long encoderCount;
+    volatile boolean encoderBSet;
+  
+  public:
+    MotorEncoder(int pinA, int pinB) : encoderPinA(pinA), encoderPinB(pinB), encoderCount(0), encoderBSet(false) {}
+    
+    void setup() {
+      pinMode(encoderPinA, INPUT_PULLUP);
+      pinMode(encoderPinB, INPUT_PULLUP);
+      
+      attachInterrupt(digitalPinToInterrupt(encoderPinA), handleEncoderInterruptWrapper, CHANGE);
+    }
+    
+    long getCount() {
+      return encoderCount;
+    }
+    
+  private:
+    static MotorEncoder* instance = nullptr;
+    
+    static void handleEncoderInterruptWrapper() {
+      if (instance) {
+        instance->handleEncoderInterrupt();
+      }
+    }
+    
+    void handleEncoderInterrupt() {
+      if (digitalRead(encoderPinA) == digitalRead(encoderPinB)) {
+        encoderCount++;
+      } else {
+        encoderCount--;
+      }
+    }
+};

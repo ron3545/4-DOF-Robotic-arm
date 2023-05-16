@@ -17,7 +17,7 @@
 
 #define TCA9548A 0x70 
 
-#define ARDUINO_SLAVE_ADDR  0x01
+#define ARDUINO_SLAVE_ADDR  0x11
 
 #define CALCULATE_ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
 #define MAX_LENGTH(...) MaxLength(__VA_ARGS__);
@@ -26,6 +26,13 @@
 
 #define NJOINTS 4
 
+//=====================home angles======================
+#define HOME_FOR_JOINT_3 191.78
+#define HOME_FOR_JOINT_2 132.36
+
+//=====================MAX angles======================
+
+
 //=====================boolean==========================
 bool Should_Exit = false;
 bool Failed_Initialization = false;
@@ -33,8 +40,6 @@ bool is_all_encoders_initiated = false;
 
 //=====================class============================
 Motor           * motors        = nullptr;
-Magnetic_Encoder* encoders      = nullptr;
-
 
 //=====================struct===========================
 End_Effector end_effector;
@@ -55,7 +60,12 @@ unsigned int current_raw_angle[NJOINTS];
 float current_angle[NJOINTS];
 float target_angle[NJOINTS];
 
-String joint_names[] = { "Joint 1", "Joint 2", "Joint 3", "Joint 4"};
+/*
+  index 1 = base
+  index 0 = joint 1
+  index 2 = joint 2
+*/
+const unsigned int sensor_index_bus[] = {1, 0, 2};
 
 unsigned int encoder_loc[] = {
   ENCODER_LOCATION_JOINT1,
@@ -66,6 +76,9 @@ unsigned int encoder_loc[] = {
 
 //======================================functions=========================================
 static float convertRawAngleToDegrees(unsigned int newAngle);
+static float convertScaledAngleToDegrees(unsigned int newAngle);
+static String burnAngle();
+
 static float MaxLength(size_t n_args, ...);
 static void I2C_Multiplexer(uint8_t serial_bus);
 static void Destroy_ptr();
@@ -74,47 +87,46 @@ static void GetCurrentRawAngle(unsigned int *raw_angle, float* angle_degrees);
 static void Send_Data_to_Arduino_Slave(const float angle[], size_t size);
 static void Receive_Data_from_Slave();
 static void Get_PS2_Button_State();
-
 //======================================main===========================================
+
+Magnetic_Encoder encoder;
+//AS5600 as5600;
 void setup()
 {
-  encoders = new Magnetic_Encoder[NJOINTS];
   motors   = new Motor[NJOINTS];
 
   Serial.begin(9600);
   Wire.begin();
 
-  bool N_encoders_Initiated[NJOINTS];
-
-  SERIAL.println("Initializing all 4 AS5600 magnetic encoder");
-
-  while(!is_all_encoders_initiated)
-  {
-    Magnetic_Encoder encoder;
-
-    for(unsigned int i = 0; i < NJOINTS; ++i)
-    { 
-      I2C_Multiplexer(i); //offset should only starts at 1
-      encoder.Set_Encoder_loc(encoder_loc[i]);
-      N_encoders_Initiated[i] = encoder.Initiate();
-      encoders[i] = encoder;
+  SERIAL.println(">>>>>>>>>>>>>>>>>>>>>>>>>>> ");
+  I2C_Multiplexer(2);
+  SERIAL.println(">>>>>>>>>>>>>>>>>>>>>>>>>>> ");
+  
+  if(encoder.detectMagnet() == 0 ){
+    while(1){
+        if(encoder.detectMagnet() == 1 ){
+            SERIAL.print("Current Magnitude: ");
+            SERIAL.println(encoder.getMagnitude());
+            break;
+        }
+        else{
+            SERIAL.println("Can not detect magnet");
+        }
+        delay(1000);
     }
-
-    //check if all encoders is initiated properly
-    if(N_encoders_Initiated[0] && N_encoders_Initiated[1] && N_encoders_Initiated[2] && N_encoders_Initiated[3] )
-      is_all_encoders_initiated = true;
-    else 
-      is_all_encoders_initiated = false;
   }
-  SERIAL.println("All magnetic sensors has been initialized");
 
-  GetCurrentRawAngle(current_raw_angle, current_angle);
+
+  //as5600.Initialize_Sensor();
+
 }
 
 
 void loop() 
 {
-
+   I2C_Multiplexer(2);
+   
+  SERIAL.println(String(convertRawAngleToDegrees(encoder.getRawAngle()),DEC));
 }
 //======================================functions impl====================================
 
@@ -156,20 +168,6 @@ void Receive_Data_from_Slave()
   memcpy(&target_angle, angle_floats, sizeof(float) * NJOINTS);
 }
 
-void GetCurrentRawAngle(unsigned int *raw_angle, float* angle_degrees)
-{ 
-  if(!is_all_encoders_initiated)
-    return;
-
-  for(int i = 0; i < NJOINTS; ++i)
-  {
-    I2C_Multiplexer(i);  //switch channel
-    raw_angle[i] = encoders[i].getRawAngle();
-
-    angle_degrees[i] = convertRawAngleToDegrees(raw_angle[i]);
-  }
-}
-
 float convertRawAngleToDegrees(unsigned int newAngle)
 {
   float angle = newAngle * 0.087890625;
@@ -180,9 +178,6 @@ void Destroy_ptr()
 {
   if(motors != nullptr)
     delete[] motors;
-  
-  if(encoders != nullptr)
-    delete[] encoders;
 }
 
 void I2C_Multiplexer(uint8_t serial_bus)
@@ -207,3 +202,4 @@ float MaxLength(size_t n_args, ...)
 
   return max_length;
 }
+
