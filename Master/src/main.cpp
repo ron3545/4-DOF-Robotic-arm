@@ -15,8 +15,6 @@
 #include <Wire.h>
 #include <stdarg.h>
 
-#define TCA9548A 0x70 
-
 #define ARDUINO_SLAVE_ADDR  0x11
 
 #define CALCULATE_ARRAY_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
@@ -31,8 +29,8 @@
 #define HOME_FOR_JOINT_2 132.36
 
 //=====================MAX angles======================
-
-
+#define JOINT1_MAX_ANGLE  -174.11
+#define JOINT2_MAX_ANGLE  194.12
 //=====================boolean==========================
 bool Should_Exit = false;
 bool Failed_Initialization = false;
@@ -51,82 +49,59 @@ End_Effector end_effector;
     index 0 = Enable pin; index 1 = input1; index 2 = input2;
 */ 
 const unsigned int motor_pins[4][3] = {
-      {11, 12, 10}, // link2
-      {9, 8, 7}     // link3
+      {11, A0, A1},
+      {10, A2, A3}
 };
+
+//stepper motor
+const uint8_t stepper_pins[] = 7, Dir_pin = 4;
 
 unsigned int current_raw_angle[NJOINTS];
 
 float current_angle[NJOINTS];
 float target_angle[NJOINTS];
 
-/*
-  index 1 = base
-  index 0 = joint 1
-  index 2 = joint 2
-*/
-const unsigned int sensor_index_bus[] = {1, 0, 2};
-
-unsigned int encoder_loc[] = {
-  ENCODER_LOCATION_JOINT1,
-  ENCODER_LOCATION_JOINT2,
-  ENCODER_LOCATION_JOINT3,
-  ENCODER_LOCATION_JOINT4,
-};
 
 //======================================functions=========================================
-static float convertRawAngleToDegrees(unsigned int newAngle);
-static float convertScaledAngleToDegrees(unsigned int newAngle);
-static String burnAngle();
 
-static float MaxLength(size_t n_args, ...);
-static void I2C_Multiplexer(uint8_t serial_bus);
+float MaxLength(size_t n_args, ...);
+
+void I2C_Multiplexer(uint8_t serial_bus)
+{ 
+    if(serial_bus > 7) return;
+
+    Wire.beginTransmission(0x70 );
+    Wire.write( 1 << serial_bus);
+    Wire.endTransmission();
+}
 static void Destroy_ptr();
-static void GetCurrentRawAngle(unsigned int *raw_angle, float* angle_degrees);
 
 static void Send_Data_to_Arduino_Slave(const float angle[], size_t size);
 static void Receive_Data_from_Slave();
-static void Get_PS2_Button_State();
+void Get_PS2_Button_State();
 //======================================main===========================================
 
 Magnetic_Encoder encoder;
+int pos = 0;
+AS5600 en;
+
+
 //AS5600 as5600;
 void setup()
 {
   motors   = new Motor[NJOINTS];
 
   Serial.begin(9600);
-  Wire.begin();
-
-  SERIAL.println(">>>>>>>>>>>>>>>>>>>>>>>>>>> ");
+  Wire.begin(); 
   I2C_Multiplexer(2);
-  SERIAL.println(">>>>>>>>>>>>>>>>>>>>>>>>>>> ");
-  
-  if(encoder.detectMagnet() == 0 ){
-    while(1){
-        if(encoder.detectMagnet() == 1 ){
-            SERIAL.print("Current Magnitude: ");
-            SERIAL.println(encoder.getMagnitude());
-            break;
-        }
-        else{
-            SERIAL.println("Can not detect magnet");
-        }
-        delay(1000);
-    }
-  }
-
-
-  //as5600.Initialize_Sensor();
-
+  en.Initialize_Sensor();
 }
 
 
 void loop() 
 {
-   I2C_Multiplexer(2);
-   
-  SERIAL.println(String(convertRawAngleToDegrees(encoder.getRawAngle()),DEC));
+  I2C_Multiplexer(2);
+  Serial.println(String(en.GetAngle()));
 }
 //======================================functions impl====================================
 
@@ -141,6 +116,7 @@ void Send_Data_to_Arduino_Slave(const float angle[], size_t size)
   Wire.write(floatdata, sizeof(floatdata));
   Wire.endTransmission();
 }
+
 
 void Get_PS2_Button_State()
 {
@@ -178,15 +154,6 @@ void Destroy_ptr()
 {
   if(motors != nullptr)
     delete[] motors;
-}
-
-void I2C_Multiplexer(uint8_t serial_bus)
-{ 
-  if(serial_bus > 7) return;
-
-  Wire.beginTransmission(TCA9548A);
-  Wire.write( 1 << serial_bus);
-  Wire.endTransmission();
 }
 
 float MaxLength(size_t n_args, ...)
