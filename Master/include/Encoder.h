@@ -43,6 +43,8 @@ public:
   unsigned int getRawAngle();
   unsigned int getScaledAngle();
 
+  float GetAngle();
+
   int detectMagnet();
   int getMagnetStrength();
   int getAgc();

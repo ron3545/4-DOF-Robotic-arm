@@ -10,12 +10,13 @@
             "includePath": [
                 "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/include",
                 "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/src",
+                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/Plotter/src",
+                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/avr-debugger/avr8-stub",
+                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/PID",
                 "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
-                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/uno/PID",
-                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/uno/QuickPID/src",
                 "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/cores/arduino",
-                "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/variants/standard",
-                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/uno/Unity/src",
+                "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/variants/mega",
+                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/Unity/src",
                 "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
                 "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                 "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
@@ -27,12 +28,13 @@
                 "path": [
                     "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/include",
                     "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/src",
+                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/Plotter/src",
+                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/avr-debugger/avr8-stub",
+                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/PID",
                     "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
-                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/uno/PID",
-                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/uno/QuickPID/src",
                     "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/cores/arduino",
-                    "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/variants/standard",
-                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/uno/Unity/src",
+                    "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/variants/mega",
+                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/Unity/src",
                     "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
                     "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                     "C:/Users/ronjo/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
@@ -42,18 +44,18 @@
             },
             "defines": [
                 "PLATFORMIO=60107",
-                "ARDUINO_AVR_UNO",
+                "ARDUINO_AVR_MEGA2560",
                 "F_CPU=16000000L",
                 "ARDUINO_ARCH_AVR",
                 "ARDUINO=10808",
-                "__AVR_ATmega328P__",
+                "__AVR_ATmega2560__",
                 ""
             ],
             "cStandard": "c11",
             "cppStandard": "c++11",
             "compilerPath": "C:/Users/ronjo/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
             "compilerArgs": [
-                "-mmcu=atmega328p",
+                "-mmcu=atmega2560",
                 ""
             ]
         }

@@ -235,6 +235,11 @@ unsigned int Magnetic_Encoder::getScaledAngle()
   return readTwoBytesTogether(_addr_angle);
 }
 
+float Magnetic_Encoder::GetAngle()
+{
+  return getRawAngle() * 0.087890625;
+}
+
 /*******************************************************
   Method: detectMagnet
   In: none
