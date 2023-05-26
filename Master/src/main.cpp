@@ -1,11 +1,3 @@
-/*
-  Author: Ron Joshua S. Quirap
-
-  This is an implementation for the master arduino.
-  The task of the master is to control the motors, gather data from the slave sensors, and request 
-  data from the arduino slave for the kinematic model.
-  
-*/
 #include "PS2.hpp"
 #include "MotorControl.hpp"
 #include "Encoder.h"
@@ -77,6 +69,8 @@ static void ReadPS2();
 
 void setup()
 { 
+  Wire.begin(); 
+
   IK = InverseKinematics_4DOF(LENGTH_LINK2, LENGTH_LINK3_TO_4, HEIGHT_LINK1, HEIGHT_BASE);
   
   Joint2.Begin(JOINT2, motor_pins[0], 3, MOTORTYPE_NORMAL);
@@ -90,13 +84,12 @@ void setup()
     //motors[i] = tmp;
   //}
 
-  Serial.begin(9600);
-  Wire.begin(); 
 
   const uint8_t Data      = 6;
   const uint8_t Cmd       = 5;
   const uint8_t Attention = 4;
   const uint8_t Clock     = 7;
+  
   ps2.setupPins(Data, Cmd, Attention, Clock, interval_ps2);
   ps2.config(PS2MODE_ANALOG);
 
@@ -135,19 +128,8 @@ void loop()
     //motors[i].MoveTo(angles[i]);
   //}
 
-  Joint2.MoveTo(joint_angles.theta2);
+  Joint2.MoveTo(-joint_angles.theta2);
   current_angle[0] = Joint2.GetCurrentAngle();
-}
-#pragma endregion
-
-#pragma region TASK4
-{
-  if(currentTime - startTime_MotorControl >= interval_print_angles){
-    Serial.print("Target Angles -> Base: " + String(joint_angles.theta1) + " Joint 2: " + String(joint_angles.theta2) + " Joint 3: " + String(joint_angles.theta3));
-    Serial.print("\t|\tCurrent Angles -> Joint2: " + String(current_angle[0]) + " Joint 3: " + String(current_angle[1]));
-    Serial.println(" ");
-    startTime_PrintAngles = currentTime;
-  }
 }
 #pragma endregion
   
@@ -220,5 +202,4 @@ void ReadPS2()
       }
   }
 }
-
 

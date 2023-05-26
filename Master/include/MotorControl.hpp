@@ -4,6 +4,7 @@
 #include "Mathematics.hpp"
 #include <PID_v1.h>
 #include "Encoder.h"
+//#include <AS5600.h>
 
 #define HOME_POS_LNK3 360   //degrees
 #define MAX_POS_LNK3 191.87 //degrees; to get here the rotation should be Counter Clockwise
@@ -27,6 +28,7 @@ enum MotorType
 //important 
 enum ENCODER_LOCATION 
 {
+    NONE   =   -1,
     BASE   =    1, 
     JOINT2 =    0,
     JOINT3 =    2
@@ -37,12 +39,16 @@ class Motor
 private:
     unsigned int encoder_loc;
     double current_angle, target_angle;   
-    
+    double prev_pos;
     //PID
     float prevTime, currentTime, deltaTime, prevError, errorIntegral, errorVal, edot;
-
+    double Setpoint, Output;
     const uint32_t* m_pins; size_t pin_size;
 
+    unsigned int Bottom_LimitSwitch, Top_LimitSwitch; // limit switches
+
+    double Kp=3, Ki= 0.00005, Kd= 0.01;
+    PID* myPID;
     MotorType       motor_type;
     AS5600 encoder;
 public:
@@ -53,15 +59,20 @@ public:
         encoder_loc is important since it is the index to the bus on which the sensor is located
     */
     bool Begin(unsigned int encoder_loc, const uint32_t *pins, size_t pin_arr_size, MotorType motor_type);
+    bool Begin(unsigned int Bottom_LimitSwitch, unsigned int Top_LimitSwitch, const uint32_t *pins, size_t pin_arr_size, MotorType motor_type);
+
+    void GrabRelease(unsigned int button);
     void MoveTo(float target_angle);
+
     float GetCurrentAngle();
-    float PID_Controller(float set_point);
+    float PID_Controller(float set_point, float current);
 
 private:
     void setMotor(unsigned int dir, int pmwVal, uint8_t pmw_pin, uint8_t pin1, uint8_t pin2);
     void setStepper(unsigned int dir, double target_position,uint8_t step_pin, uint8_t dir_pin);
 
     void I2C_Multiplexer(uint8_t serial_bus);
+    float CalculateSpeed();
 };
 
 //float convertRawAngleToDegrees(unsigned int newAngle)

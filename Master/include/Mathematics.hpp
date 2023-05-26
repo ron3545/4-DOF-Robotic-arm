@@ -26,64 +26,7 @@ struct Joint_Angle
     float theta1,  //waist or base
           theta2,  //Shoulder or Link2
           theta3;  //Elbow or Link 3
-
-    
 };
-
-struct Vector2
-{
-    float x, y;
-
-    Vector2();
-    Vector2(const Vector2& other);
-    Vector2(float _x, float _y);
-    Vector2(const float* values);
-
-    Vector2 operator +(const Vector2& v) const;
-    Vector2 operator -(const Vector2& v) const;
-    Vector2 operator *(float s) const;
-
-    Vector2& operator =(const Vector2& other);
-
-    inline operator float* () { return &x; }
-    inline operator const float* () const { return &x; }
-
-    inline float& operator [](int index) { return *(&x + index); }
-    inline float operator [](int index) const { return *(&x + index); }
-};
-
-struct Vector3
-{
-    float x, y, z;
-
-    Vector3();
-    Vector3(const Vector3& other);
-    Vector3(float _x, float _y, float _z);
-    Vector3(const float* values);
-
-    Vector3 Negate() const{
-        Vector3 tmp(-x, -y, -z);
-        return tmp;
-    }
-
-    Vector3 operator *(const Vector3& v) const;
-    Vector3 operator +(const Vector3& v) const;
-    Vector3 operator -(const Vector3& v) const;
-    Vector3 operator *(float s) const;
-
-    Vector3 operator -() const;
-
-    Vector3& operator =(const Vector3& other);
-    Vector3& operator +=(const Vector3& other);
-    Vector3& operator *=(float s);
-
-    inline operator float* () { return &x; }
-    inline operator const float* () const { return &x; }
-
-    inline float& operator [](int index) { return *(&x + index); }
-    inline float operator [](int index) const { return *(&x + index); }
-};
-
 
 //=================================class===========================================
 class InverseKinematics_4DOF
@@ -103,32 +46,71 @@ public:
 };
 
 
-//=================================functions=======================================
-uint8_t FloatToByte(float f);
-int32_t ISqrt(int32_t n);
-uint32_t NextPow2(uint32_t x);
-uint32_t Log2OfPow2(uint32_t x);
-uint32_t ReverseBits32(uint32_t bits);
-uint32_t Vec3ToUbyte4(const Vector3& v);
+class MatrixUtils {
+    private:
 
-float Powof2(float value);
+    public:
+        MatrixUtils();
+        
+        // General matrix methods
+        void print_matrix(float* mat, int r, int c, String message="");
+        void copy_matrix(float* mat, int r, int c, float* result);
+        void identity(float* mat, int n);
+        void zero(float* mat, int r, int c);
+        void transpose(float* mat, int r, int c, float* result);
+        float trace(float* mat, int r);
+        int inverse(float* A, int n);
+        void pseudo_inverse(float* mat, float* A_t, float* AA_t, float* A_tA, int r, int c, float* result);
 
-float Vec2Dot(const Vector2& a, const Vector2& b);
-float Vec2Length(const Vector2& v);
-float Vec2Distance(const Vector2& a, const Vector2& b);
+        // Transformation matrix methods
+        void get_rot_mat(float* mat, float* rot_mat);
+        void get_pos_vec(float* mat, float* pos_vec);
+        void create_trn_mat(float* rot_mat, float* pos_vec, float* trn_mat);
+        void trn_mat_inverse(float* mat, float* result);
+        void adjoint(float* mat, float* result);
+        void exp3(float* mat, float* result);
+        void exp6(float* mat, float* result);
+        void log3(float* mat, float* result);
+        void log6(float* mat, float* result);
 
-void Vec2Normalize(Vector2& out, const Vector2& v);
-void Vec2Subtract(Vector2& out, const Vector2& a, const Vector2& b);
+        // Vector Methods
+        float norm(float* vec);
+        float get_angle(float* vec);
+        
+        // Matrix operators
+        void add_scalar(float* mat, float s, int r, int c, float* result);
+        void sub_scalar(float* mat, float s, int r, int c, float* result);
+        void mul_scalar(float* mat, float s, int r, int c, float* result);
+        void div_scalar(float* mat, float s, int r, int c, float* result);
+        void add_matrix(float* mat1, float* mat2, int r, int c, float* result);
+        void sub_matrix(float* mat1, float* mat2, int r, int c, float* result);
+        void mul_matrix(float* mat1, float* mat2, int r1, int c1, int r2, int c2, float* result);
+        void mul_vector(float* mat1, float* vec, int r, int c, float* result);
 
-float Vec3Dot(const Vector3& a, const Vector3& b);
-float Vec3Length(const Vector3& v);
-float Vec3Distance(const Vector3& a, const Vector3& b);
+        // Matrix vector methods
+        void vec_to_so3(float* vec, float* result);
+        void so3_to_vec(float* rot_mat, float* result);
+        void vec_to_se3(float* vec, float* result);
+        void se3_to_vec(float* trn_mat, float* result);
+};
 
 
-void Vec3Lerp(Vector3& out, const Vector3& a, const Vector3& b, float s);
-void Vec3Add(Vector3& out, const Vector3& a, const Vector3& b);
-void Vec3Mad(Vector3& out, const Vector3& a, const Vector3& b, float s);
-void Vec3Normalize(Vector3& out, const Vector3& v);
-void Vec3Scale(Vector3& out, const Vector3& v, float scale);
-void Vec3Subtract(Vector3& out, const Vector3& a, const Vector3& b);
-void Vec3Cross(Vector3& out, const Vector3& a, const Vector3& b);
+class Kinematics {
+    private:
+        int num_of_joints;
+        int num_of_joints_declared;
+        float joint_screw_axes[6][6];
+        float initial_end_effector_pose[4][4];
+        MatrixUtils mat_utils;
+
+    public:
+        Kinematics(int num_of_joints_);
+
+        void add_joint_axis(float s1, float s2, float s3, float s4, float s5, float s6);
+        void add_initial_end_effector_pose(float m11, float m12, float m13, float m14, float m21, float m22, float m23, float m24, float m31, float m32, float m33, float m34, float m41, float m42, float m43, float m44);
+        
+        void forward(float* joint_angles, float* transform);
+        void inverse(float* transform, float* jac, float* pinv, float* A_t, float* AA_t, float* A_tA, float* initial_joint_angles, float ew, float ev, float max_iterations, float* joint_angles);
+        void jacobian(float* joint_angles, float* jacobian);
+};
+
