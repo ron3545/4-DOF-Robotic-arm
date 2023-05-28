@@ -42,22 +42,16 @@ private:
     double prev_pos;
     //PID
     float prevTime, currentTime, deltaTime, prevError, errorIntegral, errorVal, edot;
-    double Setpoint, Output;
+    volatile double Setpoint, Output;
     const uint32_t* m_pins; size_t pin_size;
 
     unsigned int Bottom_LimitSwitch, Top_LimitSwitch; // limit switches
 
-    double Kp=3, Ki= 0.00005, Kd= 0.01;
-    PID* myPID;
     MotorType       motor_type;
     AS5600 encoder;
 public:
     Motor();
-    
-    /*
-        initiates encoders
-        encoder_loc is important since it is the index to the bus on which the sensor is located
-    */
+
     bool Begin(unsigned int encoder_loc, const uint32_t *pins, size_t pin_arr_size, MotorType motor_type);
     bool Begin(unsigned int Bottom_LimitSwitch, unsigned int Top_LimitSwitch, const uint32_t *pins, size_t pin_arr_size, MotorType motor_type);
 
@@ -67,16 +61,14 @@ public:
     float GetCurrentAngle();
     float PID_Controller(float set_point, float current);
 
+    //Serial plotter
+    void sendToPC(int* data);
+    void sendToPC(double* data);
+    void sendToPC(int* data1, int* data2);
+    void sendToPC(double* data1, double* data2);
 private:
     void setMotor(unsigned int dir, int pmwVal, uint8_t pmw_pin, uint8_t pin1, uint8_t pin2);
     void setStepper(unsigned int dir, double target_position,uint8_t step_pin, uint8_t dir_pin);
 
     void I2C_Multiplexer(uint8_t serial_bus);
-    float CalculateSpeed();
 };
-
-//float convertRawAngleToDegrees(unsigned int newAngle)
-//{
- // float angle = newAngle * 0.087890625;
- // return angle;
-//}

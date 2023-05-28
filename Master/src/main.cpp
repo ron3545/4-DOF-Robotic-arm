@@ -18,8 +18,10 @@ bool is_all_encoders_initiated = false;
 PS2 ps2;
 InverseKinematics_4DOF IK;
 
-Motor motors[NJOINTS];
+Motor Joint1; //base
 Motor Joint2;
+Motor Joint3;
+Motor Joint4;
 //=====================struct===========================
 static End_Effector end_effector;
 static Joint_Angle  joint_angles;
@@ -31,13 +33,21 @@ float current_angle[NJOINTS] = {0};
 float target_angle[NJOINTS]  = {0};
 
 unsigned long startTime_PS2           = millis(); 
-unsigned long startTime_MotorControl  = millis();
+unsigned long startTime_Motor1        = millis();
+unsigned long startTime_Motor2        = millis();
+unsigned long startTime_Motor3        = millis();
+unsigned long startTime_Motor4        = millis();
 unsigned long startTime_PrintAngles   = millis(); 
 
+unsigned long timer = micros();
+long loopTime = 5000;  
 //====================constants=========================
 //time intervals
 const long interval_ps2           = 2;    
-const long interval_motor         = 1;
+const long interval_motor1        = 10;
+const long interval_motor2        = 12;
+const long interval_motor3        = 14;
+const long interval_motor4        = 16;
 const long interval_print_angles  = 1000; 
 
 const float LENGTH_LINK2      = 16.51;  //cm
@@ -58,32 +68,27 @@ const uint32_t motor_pins[4][size] = {
 };
 
 //stepper motor
-//index 0 =  step pin; index 1 = dir pin
-const uint32_t stepper_pins[] = {7, 4};
-
-unsigned int current_raw_angle[NJOINTS];
-
+//index 0 = dir pin; index 1 = step pin
+const uint32_t stepper_pins[] = {27, 26};
 //======================================functions======================================
 static void ReadPS2();
+void timeSync(unsigned long deltaT);
+
+static void Move_Motor1(unsigned long current_time, float setPoint);
+static void Move_Motor2(unsigned long current_time, float setPoint);
+static void Move_Motor3(unsigned long current_time, float setPoint);
+static void Move_Motor4(unsigned long current_time, float setPoint);
 //======================================main===========================================
 
 void setup()
 { 
+  Serial.begin(9600);
   Wire.begin(); 
 
   IK = InverseKinematics_4DOF(LENGTH_LINK2, LENGTH_LINK3_TO_4, HEIGHT_LINK1, HEIGHT_BASE);
   
   Joint2.Begin(JOINT2, motor_pins[0], 3, MOTORTYPE_NORMAL);
-
-  const unsigned int type[NJOINTS] = {JOINT2, JOINT3}; 
-  const float max_angle[NJOINTS] = {MAX_POS_LNK2, MAX_POS_LNK3};
-  //for(int i = 0; i < NJOINTS; ++i) 
-  //{
-    //Motor tmp;
-    //tmp.Begin(type[i], max_angle[i], motor_pins[i], 3, MOTORTYPE_NORMAL);
-    //motors[i] = tmp;
-  //}
-
+  //Joint3.Begin(JOINT3, motor_pins[1], 3, MOTORTYPE_NORMAL);
 
   const uint8_t Data      = 6;
   const uint8_t Cmd       = 5;
@@ -101,35 +106,33 @@ void setup()
 
 void loop() 
 { 
-  /*
-    task 1: read th ps2 controller
-    task 2: calculate IK
-    task 3: checks the current angle of each of the motor
-    task 4: move the motor to pos. This takes time of 1 microseconds, when using stepper motor
-    task 5: print the current angles for each motors every 1 seconds
-  */
   unsigned long currentTime = millis();
   
-  //task1
+#pragma once Task1
   if(currentTime - startTime_PS2 > interval_ps2)
   {
     ReadPS2();
     startTime_PS2 = currentTime;
   }
-  //task2
+#pragma endregion
+
   IK.Calculate_Joint_Angles(end_effector, joint_angles);
 
 #pragma region TASK3
 {
-  //float angles [NJOINTS] = {joint_angles.theta2, joint_angles.theta3};
-  //for(unsigned long i = 0; i < NJOINTS; ++i)
-  //{
-    //current_angle[i] = motors[i].GetCurrentAngle();
-    //motors[i].MoveTo(angles[i]);
-  //}
+  Move_Motor2(currentTime, 85);
+  //Move_Motor3(currentTime, 90);
+}
+#pragma endregion
 
-  Joint2.MoveTo(-joint_angles.theta2);
-  current_angle[0] = Joint2.GetCurrentAngle();
+#pragma region TASK4
+{
+  if(currentTime - startTime_PrintAngles >= interval_print_angles){
+    Serial.print("Target Angles -> Joint1/Base: " + String(joint_angles.theta1) + " Joint 2: " + String(joint_angles.theta2) + " Joint 3: " + String(joint_angles.theta3));
+    Serial.print("\t|\tCurrent Angles -> Joint2: " + String(current_angle[0]) + " Joint 3: " + String(current_angle[1]));
+    Serial.println(" ");
+    startTime_PrintAngles = currentTime;
+  }
 }
 #pragma endregion
   
@@ -203,3 +206,57 @@ void ReadPS2()
   }
 }
 
+void Move_Motor1(unsigned long current_time, float setPoint)
+{
+  if(current_time - startTime_Motor1 > interval_motor1)
+  {
+    startTime_Motor1 = current_time;
+  }
+}
+void Move_Motor2(unsigned long current_time, float setPoint)
+{
+  if(current_time - startTime_Motor2 > interval_motor2)
+  {
+    Joint2.MoveTo(setPoint);
+    current_angle[0] = Joint2.GetCurrentAngle();
+
+    startTime_Motor2 = current_time;
+  }
+}
+void Move_Motor3(unsigned long current_time, float setPoint)
+{
+  if(current_time - startTime_Motor3 > interval_motor3){
+    Joint3.MoveTo(setPoint);
+    current_angle[1] = Joint3.GetCurrentAngle();
+
+    startTime_Motor3 = current_time;
+  }
+}
+void Move_Motor4(unsigned long current_time, float setPoint)
+{
+  if(current_time - startTime_Motor4 > interval_motor4)
+  {
+    startTime_Motor4 = current_time;
+  }
+}
+
+//serial plotter
+void timeSync(unsigned long deltaT)
+{
+  unsigned long currTime = micros();
+  long timeToDelay = deltaT - (currTime - timer);
+  if (timeToDelay > 5000)
+  {
+    delay(timeToDelay / 1000);
+    delayMicroseconds(timeToDelay % 1000);
+  }
+  else if (timeToDelay > 0)
+  {
+    delayMicroseconds(timeToDelay);
+  }
+  else
+  {
+      // timeToDelay is negative so we start immediately
+  }
+  timer = currTime + timeToDelay;
+}

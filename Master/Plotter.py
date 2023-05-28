@@ -6,17 +6,26 @@ import collections
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import struct
+import copy
 import pandas as pd
 
 
 class serialPlot:
-    def __init__(self, serialPort = 'COM7', serialBaud = 9600, plotLength = 100, dataNumBytes = 2):
+    def __init__(self, serialPort='/dev/ttyUSB0', serialBaud=38400, plotLength=100, dataNumBytes=2, numPlots=1):
         self.port = serialPort
         self.baud = serialBaud
         self.plotMaxLength = plotLength
         self.dataNumBytes = dataNumBytes
-        self.rawData = bytearray(dataNumBytes)
-        self.data = collections.deque([0] * plotLength, maxlen=plotLength)
+        self.numPlots = numPlots
+        self.rawData = bytearray(numPlots * dataNumBytes)
+        self.dataType = None
+        if dataNumBytes == 2:
+            self.dataType = 'h'     # 2 byte integer
+        elif dataNumBytes == 4:
+            self.dataType = 'f'     # 4 byte float
+        self.data = []
+        for i in range(numPlots):   # give an array for each type of data and store them in a list
+            self.data.append(collections.deque([0] * plotLength, maxlen=plotLength))
         self.isRun = True
         self.isReceiving = False
         self.thread = None
@@ -44,11 +53,14 @@ class serialPlot:
         self.plotTimer = int((currentTimer - self.previousTimer) * 1000)     # the first reading will be erroneous
         self.previousTimer = currentTimer
         timeText.set_text('Plot Interval = ' + str(self.plotTimer) + 'ms')
-        value,  = struct.unpack('f', self.rawData)    # use 'h' for a 2 byte integer
-        self.data.append(value)    # we get the latest data point and append it to our array
-        lines.set_data(range(self.plotMaxLength), self.data)
-        lineValueText.set_text('[' + lineLabel + '] = ' + str(value))
-        # self.csvData.append(self.data[-1])
+        privateData = copy.deepcopy(self.rawData[:])    # so that the 3 values in our plots will be synchronized to the same sample time
+        for i in range(self.numPlots):
+            data = privateData[(i*self.dataNumBytes):(self.dataNumBytes + i*self.dataNumBytes)]
+            value,  = struct.unpack(self.dataType, data)
+            self.data[i].append(value)    # we get the latest data point and append it to our array
+            lines[i].set_data(range(self.plotMaxLength), self.data[i])
+            lineValueText[i].set_text('[' + lineLabel[i] + '] = ' + str(value))
+        # self.csvData.append([self.data[0][-1], self.data[1][-1], self.data[2][-1]])
 
     def backgroundThread(self):    # retrieve data
         time.sleep(1.0)  # give some buffer time for retrieving data
@@ -68,12 +80,13 @@ class serialPlot:
 
 
 def main():
-    # portName = 'COM5'     # for windows users
+    # portName = 'COM5'
     portName = 'COM7'
     baudRate = 9600
-    maxPlotLength = 100
+    maxPlotLength = 100     # number of points in x-axis of real time plot
     dataNumBytes = 4        # number of bytes of 1 data point
-    s = serialPlot(portName, baudRate, maxPlotLength, dataNumBytes)   # initializes all required variables
+    numPlots = 3            # number of plots in 1 graph
+    s = serialPlot(portName, baudRate, maxPlotLength, dataNumBytes, numPlots)   # initializes all required variables
     s.readSerialStart()                                               # starts background thread
 
     # plotting starts below
@@ -82,16 +95,20 @@ def main():
     xmax = maxPlotLength
     ymin = -(1)
     ymax = 1
-    fig = plt.figure()
+    fig = plt.figure(figsize=(10, 8))
     ax = plt.axes(xlim=(xmin, xmax), ylim=(float(ymin - (ymax - ymin) / 10), float(ymax + (ymax - ymin) / 10)))
-    ax.set_title('Arduino Analog Read')
-    ax.set_xlabel("time")
-    ax.set_ylabel("AnalogRead Value")
+    ax.set_title('Arduino Accelerometer')
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Accelerometer Output")
 
-    lineLabel = 'Potentiometer Value'
-    timeText = ax.text(0.50, 0.95, '', transform=ax.transAxes)
-    lines = ax.plot([], [], label=lineLabel)[0]
-    lineValueText = ax.text(0.50, 0.90, '', transform=ax.transAxes)
+    lineLabel = ['X', 'Y', 'Z']
+    style = ['r-', 'c-', 'b-']  # linestyles for the different plots
+    timeText = ax.text(0.70, 0.95, '', transform=ax.transAxes)
+    lines = []
+    lineValueText = []
+    for i in range(numPlots):
+        lines.append(ax.plot([], [], style[i], label=lineLabel[i])[0])
+        lineValueText.append(ax.text(0.70, 0.90-i*0.05, '', transform=ax.transAxes))
     anim = animation.FuncAnimation(fig, s.getSerialData, fargs=(lines, lineValueText, lineLabel, timeText), interval=pltInterval)    # fargs has to be a tuple
 
     plt.legend(loc="upper left")

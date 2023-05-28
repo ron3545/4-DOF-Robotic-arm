@@ -29,12 +29,10 @@ bool Motor::Begin(unsigned int encoder_loc, const uint32_t *pins, size_t pin_arr
     this->motor_type = motor_type;
     this->encoder_loc = encoder_loc;
 
-    myPID = new PID(&current_angle, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
     for(unsigned int i = 0; i < pin_arr_size; ++i)  
         pinMode(m_pins[i], OUTPUT);
 
     Setpoint = -40;
-    myPID->SetMode(AUTOMATIC);
     I2C_Multiplexer(this->encoder_loc);
     encoder.Initialize_Sensor();
 }
@@ -49,8 +47,6 @@ bool Motor::Begin(unsigned int Bottom_LimitSwitch, unsigned int Top_LimitSwitch,
 
     for(unsigned int i = 0; i < pin_arr_size; ++i)  
         pinMode(m_pins[i], OUTPUT);
-
-    myPID->SetMode(AUTOMATIC);
 
     pinMode(this->Bottom_LimitSwitch, INPUT);
     pinMode(this->Top_LimitSwitch, INPUT);
@@ -122,7 +118,7 @@ void Motor::MoveTo(float target_angle)
     I2C_Multiplexer(this->encoder_loc);
 
     current_angle = encoder.GetAngle();
-    myPID->Compute();
+    Output = PID_Controller(target_angle, current_angle);
 
     float speed = fabs(Output);
     
@@ -135,19 +131,24 @@ void Motor::MoveTo(float target_angle)
         
     if(motor_type == MOTORTYPE_NORMAL)
         setMotor(dir, speed, m_pins[ENABLE_PIN], m_pins[INPUT1], m_pins[INPUT2]);
+    else 
+        setStepper(dir, target_angle, m_pins[STEP_PIN], m_pins[DIR_PIN]);
+    
+    current_angle = encoder.GetAngle();
 }
 
 void Motor::setMotor(unsigned int dir, int pmwVal, uint8_t pmw_pin, uint8_t pin1, uint8_t pin2)
 {
+    //ToDo change pwm for joint3
     if(dir == MOTOR_DIRECTION_FORWARD)
     {
-        analogWrite(pmw_pin, (encoder_loc == JOINT2)? 990 : pmwVal);
+        analogWrite(pmw_pin, (encoder_loc == JOINT2)? map(pmwVal, 60, 200, 0, 255) :  map(pmwVal, 990, 1023, 50, 255));
         digitalWrite(pin1,  HIGH);
         digitalWrite(pin2, LOW);
     }
     else if(dir == MOTOR_DIRECTION_REVERSE)
     {
-        analogWrite(pmw_pin, 1000); //slow decent
+        analogWrite(pmw_pin, (encoder_loc == JOINT2)? map(pmwVal, 990, 1023, 50, 255) : map(pmwVal, 990, 1023, 50, 255)); 
         digitalWrite(pin1, LOW);
         digitalWrite(pin2, HIGH);
     }
@@ -194,9 +195,22 @@ void Motor::setStepper(unsigned int dir, double angle, uint8_t step_pin, uint8_t
 
 float  Motor::PID_Controller(float set_point, float current)
 {   
-    const float proportional = 1; 
-    const float integral     = 0.00005; 
-    const float derivative   = 0.01; 
+    float proportional = 0.00f;
+    float integral = 0.00f;    
+    float derivative = 0.00f;
+
+    if(encoder_loc == JOINT2)
+    {
+        proportional = 0.5; 
+        integral     = 0.00333; 
+        derivative   = 0.048223;    
+    }
+    else
+    {
+        proportional = 3.7; 
+        integral     = 0.000433; 
+        derivative   = 0.059223;
+    }
 
     currentTime = micros();
     deltaTime = (currentTime - prevTime) / 1000000.0;
@@ -209,7 +223,40 @@ float  Motor::PID_Controller(float set_point, float current)
     double control_signal = (proportional * errorVal) + (derivative * edot) + (integral *errorIntegral);
 
     prevError = errorVal;
+
+    //sendToPC(&target_angle, &current_angle);
     return control_signal;
 }
 
 
+void Motor::sendToPC(int* data)
+{
+    byte* byteData = (byte*)(data);    // Casting to a byte pointer
+    Serial.write(byteData, 2);         // Send through Serial to the PC
+}
+
+void Motor::sendToPC(double* data)
+{
+    byte* byteData = (byte*)(data);    // Casting to a byte pointer
+    Serial.write(byteData, 4);         // Send through Serial to the PC
+}
+
+void Motor::sendToPC(double* data1, double* data2)
+{
+    byte* byteData1 = (byte*)(data1);
+    byte* byteData2 = (byte*)(data2);
+
+    byte buf[6] = {byteData1[0], byteData1[1],
+                   byteData2[0], byteData2[1]};
+    Serial.write(buf, 6);
+}
+
+void Motor::sendToPC(int* data1, int* data2)
+{
+    byte* byteData1 = (byte*)(data1);
+    byte* byteData2 = (byte*)(data2);
+    byte buf[12] = {byteData1[0], byteData1[1], byteData1[2], byteData1[3],
+                    byteData2[0], byteData2[1], byteData2[2], byteData2[3]
+                   };
+    Serial.write(buf, 12);
+}
