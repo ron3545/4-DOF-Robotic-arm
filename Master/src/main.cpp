@@ -4,7 +4,6 @@
 
 #include <string.h>
 #include <Wire.h>
-#include <stdarg.h>
 
 #define ARRAY_SIZE(arr) sizeof(arr) / sizeof(arr[0])
 
@@ -32,6 +31,10 @@ int PS2error;
 float current_angle[NJOINTS] = {0};
 float target_angle[NJOINTS]  = {0};
 
+//PID
+double Kp = 0.1, Ki = 0.0, Kd = 0.0;
+
+unsigned long startTime_readPot       = millis();
 unsigned long startTime_PS2           = millis(); 
 unsigned long startTime_Motor1        = millis();
 unsigned long startTime_Motor2        = millis();
@@ -43,6 +46,7 @@ unsigned long timer = micros();
 long loopTime = 5000;  
 //====================constants=========================
 //time intervals
+const long interval_Pot           = 100;
 const long interval_ps2           = 2;    
 const long interval_motor1        = 10;
 const long interval_motor2        = 12;
@@ -55,6 +59,7 @@ const float LENGTH_LINK3_TO_4 = 21.59;  //cm
 const float HEIGHT_BASE       = 3.81;   //cm
 const float HEIGHT_LINK1      = 10.922; //cm
 
+const uint32_t pot_Kp = A2, pot_Ki = A1, pot_Kd = A0;
 /*
     MOTORTYPE_NORMAL
     index 0 = Enable pin; index 1 = input1; index 2 = input2;
@@ -82,7 +87,7 @@ static void Move_Motor4(unsigned long current_time, float setPoint);
 
 void setup()
 { 
-  Serial.begin(9600);
+  Serial.begin(115200);
   Wire.begin(); 
 
   IK = InverseKinematics_4DOF(LENGTH_LINK2, LENGTH_LINK3_TO_4, HEIGHT_LINK1, HEIGHT_BASE);
@@ -108,34 +113,16 @@ void loop()
 { 
   unsigned long currentTime = millis();
   
-#pragma once Task1
   if(currentTime - startTime_PS2 > interval_ps2)
   {
     ReadPS2();
     startTime_PS2 = currentTime;
   }
-#pragma endregion
 
   IK.Calculate_Joint_Angles(end_effector, joint_angles);
 
-#pragma region TASK3
-{
-  Move_Motor2(currentTime, 85);
-  //Move_Motor3(currentTime, 90);
-}
-#pragma endregion
+  Move_Motor2(currentTime, 45);
 
-#pragma region TASK4
-{
-  if(currentTime - startTime_PrintAngles >= interval_print_angles){
-    Serial.print("Target Angles -> Joint1/Base: " + String(joint_angles.theta1) + " Joint 2: " + String(joint_angles.theta2) + " Joint 3: " + String(joint_angles.theta3));
-    Serial.print("\t|\tCurrent Angles -> Joint2: " + String(current_angle[0]) + " Joint 3: " + String(current_angle[1]));
-    Serial.println(" ");
-    startTime_PrintAngles = currentTime;
-  }
-}
-#pragma endregion
-  
 }
 //======================================functions impl====================================
 
@@ -217,8 +204,8 @@ void Move_Motor2(unsigned long current_time, float setPoint)
 {
   if(current_time - startTime_Motor2 > interval_motor2)
   {
-    Joint2.MoveTo(setPoint);
-    current_angle[0] = Joint2.GetCurrentAngle();
+    Joint2.MoveTo(setPoint, current_time);
+    current_angle[0] = Joint2.GetCurrentPos();
 
     startTime_Motor2 = current_time;
   }
@@ -226,8 +213,8 @@ void Move_Motor2(unsigned long current_time, float setPoint)
 void Move_Motor3(unsigned long current_time, float setPoint)
 {
   if(current_time - startTime_Motor3 > interval_motor3){
-    Joint3.MoveTo(setPoint);
-    current_angle[1] = Joint3.GetCurrentAngle();
+    Joint3.MoveTo(setPoint, current_time);
+    current_angle[1] = Joint3.GetCurrentPos();
 
     startTime_Motor3 = current_time;
   }

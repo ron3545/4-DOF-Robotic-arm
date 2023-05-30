@@ -10,6 +10,9 @@
             "includePath": [
                 "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/include",
                 "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/src",
+                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/PID-AutoTune",
+                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/TimerOne",
+                "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/QuickPID/src",
                 "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/AS5600",
                 "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/Plotter/src",
                 "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/avr-debugger/avr8-stub",
@@ -29,6 +32,9 @@
                 "path": [
                     "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/include",
                     "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/src",
+                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/PID-AutoTune",
+                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/TimerOne",
+                    "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/QuickPID/src",
                     "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/AS5600",
                     "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/Plotter/src",
                     "d:/PROJECTS/Robotics/Robotic_Arm_For_Arduino/Master/.pio/libdeps/megaatmega2560/avr-debugger/avr8-stub",
