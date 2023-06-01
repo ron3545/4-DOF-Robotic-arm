@@ -17,12 +17,9 @@
 #define DIR_PIN  1
 
 Motor::Motor() 
-    : encoder_loc(0), current_pos(0.0f), target_pos(0), prevTime(0), currentTime(0), 
-      deltaTime(0), prevError(0),errorIntegral(0), errorVal(0), edot(0), m_pins(nullptr), 
-      pin_size(0), motor_type(motor_type), Bottom_LimitSwitch(0), Top_LimitSwitch(0)
-{
-    startTime = millis();
-}
+    : encoder_loc(0), current_pos(0.0f), target_pos(0), prev_pos(0), startTime1(millis()), startTime2(millis()), m_pins(nullptr), 
+      pin_size(0), enca(0), encb(0), motor_type(motor_type), Bottom_LimitSwitch(0), Top_LimitSwitch(0)
+{}
 
 bool Motor::Begin(unsigned int encoder_loc, const uint32_t *pins, size_t pin_arr_size, MotorType motor_type)
 {
@@ -40,7 +37,26 @@ bool Motor::Begin(unsigned int encoder_loc, const uint32_t *pins, size_t pin_arr
 
     I2C_Multiplexer(this->encoder_loc);
     encoder.Initialize_Sensor();
+
 }
+
+
+bool Motor::Begin(unsigned int encoder_loc, const uint32_t enca, const uint32_t encb,const uint32_t *pins, size_t pin_arr_size, MotorType motor_type)
+{
+    this->m_pins = pins; 
+    this->pin_size = pin_arr_size; 
+    this->motor_type = motor_type;
+    this->encoder_loc = encoder_loc;
+
+    for(unsigned int i = 0; i < pin_arr_size; ++i)  
+        pinMode(m_pins[i], OUTPUT);
+
+    pid.SetMode(AUTOMATIC);
+    pid.SetSampleTime(1);
+    pid.SetOutputLimits(-180, 180);
+
+}
+
 
 bool Motor::Begin(unsigned int Bottom_LimitSwitch, unsigned int Top_LimitSwitch, const uint32_t *pins, size_t pin_arr_size, MotorType motor_type)
 {
@@ -52,25 +68,8 @@ bool Motor::Begin(unsigned int Bottom_LimitSwitch, unsigned int Top_LimitSwitch,
     
     for(unsigned int i = 0; i < pin_arr_size; ++i)  
         pinMode(m_pins[i], OUTPUT);
-
-    pid.SetMode(AUTOMATIC);
-    pid.SetSampleTime(1);
-    pid.SetOutputLimits(-180, 180);
-
-    pinMode(this->Bottom_LimitSwitch, INPUT);
-    pinMode(this->Top_LimitSwitch, INPUT);
-     pid.SetSampleTime(50);
-    
-    I2C_Multiplexer(this->encoder_loc);
-    encoder.Initialize_Sensor();
 }
 
-void Motor::Tune_PID(double* kp, double* ki, double* kd)
-{
-   this->Kp = *kp;
-   this->Ki = *ki;
-   this->Kd = *kd; 
-}
 
 void Motor::I2C_Multiplexer(uint8_t serial_bus)
 { 
@@ -80,75 +79,77 @@ void Motor::I2C_Multiplexer(uint8_t serial_bus)
     Wire.write( 1 << serial_bus);
     Wire.endTransmission();
 }
+float Motor::GetAngle()
+{
+    I2C_Multiplexer(this->encoder_loc);
+    return encoder.GetAngle();
+}
 
 float Motor::GetCurrentPos()
 {
-    I2C_Multiplexer(this->encoder_loc);
-    current_pos = map(encoder.GetAngle(), 0, 360, 0, 1023);
-    return current_pos;
+    if(encoder_loc != JOINT4)
+    {
+        I2C_Multiplexer(this->encoder_loc);
+        current_pos = map(GetAngle(), -360, 360, -1023, 1023);
+        return current_pos;
+    }
+
+    return current_pos; //for Joint4
 }
 
-void Motor::GrabRelease(unsigned int button)
+void Motor::GrabRelease(bool should_grab, unsigned long currentTime)
 {
-    const int speed = 50;
-    analogWrite(m_pins[ENABLE_PIN], speed);
+    analogWrite(m_pins[ENABLE_PIN], 2000);
     
     //grab
-    if(button == PS2BTN_SQUARE && digitalRead(Top_LimitSwitch) == HIGH)
+    if(should_grab)
     {
-        if(digitalRead(Bottom_LimitSwitch) != HIGH)
+        Serial.println("grab");
+        while(!digitalRead(Bottom_LimitSwitch))
         {
             digitalWrite(m_pins[INPUT1], HIGH);
             digitalWrite(m_pins[INPUT2], LOW);
         }
-        else
-        {
-            digitalWrite(m_pins[INPUT1], LOW);
-            digitalWrite(m_pins[INPUT2], LOW);
-        }
-    }
-
-    //release
-    else if(button == PS2BTN_CIRCLE && digitalRead(Bottom_LimitSwitch) == HIGH)
-    {
-        if(digitalRead(Top_LimitSwitch) != HIGH)
-        {
-            digitalWrite(m_pins[INPUT1], HIGH);
-            digitalWrite(m_pins[INPUT2], LOW);
-        }
-        else
-        {
-            digitalWrite(m_pins[INPUT1], LOW);
-            digitalWrite(m_pins[INPUT2], LOW);
-        }
-    }
-    else
-    {
+        delay(100);
         digitalWrite(m_pins[INPUT1], LOW);
         digitalWrite(m_pins[INPUT2], LOW);
     }
+    else
+    {
+        Serial.println("drop");
+        while(!digitalRead(Top_LimitSwitch))
+        {
+            Serial.println("top not pressed");
+            digitalWrite(m_pins[INPUT1], LOW);
+            digitalWrite(m_pins[INPUT2], HIGH);
+        }
+        delay(100);
+        digitalWrite(m_pins[INPUT1], LOW);
+        digitalWrite(m_pins[INPUT2], LOW);
+    }
+    
 }
 
-void Motor::MoveTo(float target_angle, unsigned long current_time)
+void Motor::MoveTo(float target_angle)
 {
     if(target_angle == NULL)
         return;
 
     //convert angle to pulse
-    target_pos = map(target_angle, 0, 360, 0, 1023);
+    target_pos = map(target_angle, -360, 360, -1023, 1023);
 
     I2C_Multiplexer(this->encoder_loc);
     current_pos = GetCurrentPos();
     pid.Compute();
     
-    Serial.print(">target_pos:");
-    Serial.println(target_pos);
+    //Serial.print(">target_pos:");
+    //Serial.println(target_pos);
 
-    Serial.print(">output:");
-    Serial.println(Output);
+    //Serial.print(">output:");
+    //Serial.println(Output);
 
-    Serial.print(">current_pos:");
-    Serial.println(current_pos);
+    //Serial.print(">current_pos:");
+    //Serial.println(current_pos); 
 
     float speed = fabs(Output);
     
@@ -165,20 +166,43 @@ void Motor::MoveTo(float target_angle, unsigned long current_time)
         setStepper(dir, target_angle, m_pins[STEP_PIN], m_pins[DIR_PIN]);
 }
 
-void Motor::setMotor(unsigned int dir, int pmwVal, uint8_t pmw_pin, uint8_t pin1, uint8_t pin2)
+void Motor::MoveTo(float target_angle, int current_position)
+{
+    if(target_angle == NULL)
+        return;
+
+    //convert angle to pulse
+    target_pos = map(target_angle, -360, 360, -1023, 1023);
+
+    current_pos = current_position;
+    pid.Compute();
+
+    float speed = fabs(Output);
+    
+    if(speed > 1023)
+        speed = 1023;
+
+    int dir = MOTOR_DIRECTION_FORWARD;
+    if(Output < 0)
+        dir = MOTOR_DIRECTION_REVERSE;
+        
+    setMotor(dir, speed, m_pins[ENABLE_PIN], m_pins[INPUT1], m_pins[INPUT2]);
+}
+
+void Motor::setMotor(unsigned int dir, int speed, uint8_t pmw_pin, uint8_t pin1, uint8_t pin2)
 {
     //ToDo change pwm for joint3
     if(dir ==  MOTOR_DIRECTION_FORWARD)
     {
-        float pwm = map(pmwVal, 60, 200, 0, 255);
-        analogWrite(pmw_pin, (encoder_loc == JOINT2)?  pwm:  pmwVal);
+        //float pwm = map(speed, 60, 200, 0, 255);
+        analogWrite(pmw_pin, speed);
         digitalWrite(pin1, HIGH);
         digitalWrite(pin2, LOW);
     }
     else if(dir == MOTOR_DIRECTION_REVERSE)
     {
-        float pwm = map(pmwVal, 990, 1023, 50, 255);
-        analogWrite(pmw_pin, (encoder_loc == JOINT2)? constrain(pwm, 990, 1023): pmwVal); 
+        //float pwm = map(speed, 990, 1023, 50, 255);
+        analogWrite(pmw_pin, fabs(speed * 5.6)); 
         digitalWrite(pin1, LOW);
         digitalWrite(pin2, HIGH);
     }
