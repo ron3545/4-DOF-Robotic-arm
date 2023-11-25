@@ -1,8 +1,5 @@
 # ROBOTICS
-This is a project conducted and presented on June 6, 2023.
-This 4DOF articulated Robotic arm uses dc motors as its main actuators. For sensor, it uses AS5600 magnetic encoder for reading the position of eanch joints.
-Each motor is connetrelled by PID to ensure that the motor positions it self in a right manner, with its speed also controlled. The system uses ESP32, 2 l298n motor drivers
-and A4988 stepper driver.
+The articulated 4DOF robotic arm project, conducted and presented on June 6, 2023, showcases the implementation of a versatile robotic arm using DC motors as the primary actuators. This arm incorporates advanced control techniques, utilizing PID (Proportional-Integral-Derivative) control for precise positioning and speed regulation. With the integration of an AS5600 magnetic encoder and a range of electronic components such as the Arduino Mega, L298N motor drivers, and A4988 stepper driver, this project demonstrates a comprehensive approach to achieving accurate and controlled movements. The wirings are a bit messy due to the fact that the deadline was changed by my professor.
 
 
 https://github.com/ron3545/ROBOTICS/assets/86136180/28dd57ee-4b28-4dc5-99a4-9b4f8e63d114
@@ -22,5 +19,16 @@ The Motor class encapsulates the functionality of a motor in a robotic system. I
 ## PS2 class
 This header file defines constants and a class, PS2, for interfacing with a PlayStation 2 (PS2) controller. The PS2 class provides methods for setting up communication pins, reading joystick and button values, and configuring the controller mode.
 
+# Robotic Arm Design
+The 4DOF (Degrees of Freedom) robotic arm consists of four interconnected joints that enable it to perform a wide range of motions. Each joint is equipped with a DC motor as the actuator, providing the necessary torque to move the arm segments. To accurately determine the position of each joint, an AS5600 magnetic encoder is employed, allowing for precise feedback and control.
+
+## Control System:
+The control system of the robotic arm utilizes PID control to ensure precise and stable positioning of each joint. PID control is a feedback mechanism that adjusts the motor's input based on the difference between the desired position and the measured position. This control loop allows for real-time adjustments, minimizing position errors and enhancing the arm's overall accuracy.
+
+## Electronics and Components:
+The core components of the project include an Arduino Mega, two L298N motor drivers, and an A4988 stepper driver. The Arduino Mega serves as the main controller, responsible for executing the control algorithms and coordinating the movements of the robotic arm. The L298N motor drivers are employed to drive the DC motors, providing sufficient power and control for their operation. Additionally, the A4988 stepper driver is utilized for accurate control of the AS5600 magnetic encoder, enabling precise position sensing.
+
+## Project Goals:
+The primary objective of this project is to develop an articulated robotic arm capable of accurately and smoothly performing various tasks. The integration of PID control ensures that the arm can position itself precisely and efficiently, while the use of DC motors offers the necessary strength and dexterity for a range of applications. By utilizing the AS5600 magnetic encoder, the arm can reliably sense its joint positions, facilitating enhanced control and flexibility.
 
 
